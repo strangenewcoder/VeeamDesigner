@@ -74,6 +74,12 @@ These tools are not bundled with the project but are useful during development o
 
 ---
 
+## Contibutors
+
+The code and documentation were developed, drafted and revised with assistance from Claude (Anthropic).
+
+---
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0 (GPL-3.0).
