@@ -26,9 +26,11 @@ The existing Draw.io schematic, if present, is read to recover some information 
 
 ## Sample project
 
-In the folders sample\example1 i've setup as a sample project for a small backup infrastructure, to demostrate what this project is about.
+In the folder `sample/example1` I've set up a sample project for a small backup infrastructure, to demonstrate what this project is about.
 
-there are now 4 version of the same project, in several steps.
+There are 4 versions of the same project, showing several steps.
+
+To look at the `.md` files, all you'll need is your favorite text editor, and for the `.drawio` file you can use the [Draw.io Web App](https://app.diagrams.net/).
 
 ### v1 — Bare minimum
 
@@ -36,7 +38,7 @@ A first run with just two systems defined: the backup server and the repository.
 
 ![v1 - bare minimum diagram](images/draw1_v1.png)
 
-Hovering over a system shows a tooltip with it's IP address, primary role, and any additional (secondary) roles it plays:
+Hovering over a system shows a tooltip with its IP address, primary role, and any additional (secondary) roles it plays:
 
 ![v1 - system tooltip](images/draw1_v1_tooltip.png)
 
@@ -57,3 +59,4 @@ The vCenter server and two ESXi hosts are added to the project file. On regenera
 Starting from v3, the systems are manually rearranged into a clear, readable layout.
 
 ![v4 - final rearranged layout](images/draw1_v4.png)
+
