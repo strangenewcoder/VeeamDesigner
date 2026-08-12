@@ -96,6 +96,100 @@ def get_style_files(styles_dir):
     }
 
 
+def output_code_begin():
+    """
+    Returns the header lines of the generated Python script as a list of strings.
+    """
+
+    lines = []
+    lines.append("import os")
+    lines.append("")
+    lines.append("from N2G import drawio_diagram")
+    lines.append("")
+    lines.append("styles_dir = os.environ.get('STYLES')")
+    lines.append("")
+    lines.append("diagram = drawio_diagram()")
+    lines.append('diagram.add_diagram("Page-1")')
+
+    return lines
+
+
+def output_code_nodes(style_names):
+    """
+    Returns the add_node lines of the generated Python script as a list of strings.
+    """
+
+    lines = []
+    auto_x = 100
+    auto_y = 100
+    col = 1
+
+    for name in sorted(style_names):
+        print(name)
+        x_pos = str(auto_x)
+        y_pos = str(auto_y)
+        width = "60"
+        height = "60"
+
+        if col == 3:
+            auto_x = 100
+            auto_y += 150
+            col = 1
+        else:
+            auto_x += 250
+            col += 1
+
+        style_file = f'styles_dir+"/{name}.txt"'
+
+        lines.append(
+            f"diagram.add_node("
+            f'id="{name}",'
+            f'label="{name}",'
+            f"style={style_file},"
+            f'x_pos="{x_pos}",'
+            f'y_pos="{y_pos}",'
+            f'width="{width}",'
+            f'height="{height}")'
+        )
+
+    return lines
+
+
+def output_code_end(drawing_file_name):
+    """
+    Returns the footer lines of the generated Python script as a list of strings.
+    """
+
+    folder = os.path.dirname(drawing_file_name) or "./"
+    filename = os.path.basename(drawing_file_name)
+    lines = []
+    lines.append(f'diagram.dump_file(filename="{filename}", folder="{folder}")')
+    lines.append("")
+
+    return lines
+
+
+def write_portfolio_script(style_names, drawing_name):
+    """
+    Assemble and write the generated Python script to <drawing_name>.py.
+    """
+
+    script_file = drawing_name + ".py"
+    drawing_file_name = drawing_name + ".drawio"
+
+    lines = output_code_begin()
+
+    print("here")
+    lines += output_code_nodes(style_names)
+
+    lines += output_code_end(drawing_file_name)
+
+    with open(script_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
+    eprint.eprint(f"[INFO] Script generated: {script_file}")
+
+
 def main():
     """
     Main function.
@@ -129,6 +223,8 @@ def main():
             eprint.eprint(
                 "\n[OK] All roles have a matching style file. No extra files found."
             )
+            # Write script to generate Draw.io
+            write_portfolio_script(style_names, "portfolio")
             return
 
         if missing:
