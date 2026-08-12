@@ -60,3 +60,4 @@ Starting from v3, the systems are manually rearranged into a clear, readable lay
 
 ![v4 - final rearranged layout](images/draw1_v4.png)
 
+.
