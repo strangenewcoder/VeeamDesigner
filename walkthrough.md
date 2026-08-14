@@ -132,7 +132,7 @@ copy samples\example1\v4\example1.vd samples\myproject\myproject.vd
 This is a plain text file that lists all the systems involved in the project and their roles.
 See the **Project file format** section for the full specification.
 
-## Generate the schematic
+## Generate the drawing script
 
 Run `veeamdesigner.py` from inside the project folder, passing the project name and a drawing name:
 
@@ -141,21 +141,21 @@ cd %PROJECTDIR%\samples\myproject
 python %PROJECTDIR%\veeamdesigner.py -p myproject -w draw1
 ```
 
-This produces a Python script `draw1.py` in the current folder. The script, when executed, generates the Draw.io diagram `site_a.drawio`.
+This produces a Python script `draw1.py` in the current folder. The script, when executed, generates the Draw.io diagram `draw1.drawio`.
 
 What happens internally:
 
-1. The systems matching the drawing name `site_a` are loaded from `myproject.vd` into the `systems` table.
-2. If `site_a.drawio` already exists, node positions are read from it.
+1. The systems matching the drawing name `draw1` are loaded from `myproject.vd` into the `systems` table.
+2. If `draw1.drawio` already exists, node positions are read from it.
 3. For each system, an `add_node` call is written to the script, using the existing position if available, or an auto-calculated position if not.
 4. For each role relationship found in `ports_definitions`, an `add_link` call is written with the relevant ports as labels.
 
 ---
 
-#### Step 5 — Run the drawing script
+## Run the drawing script
 
 ```
-python site_a.py
+python draw1.py
 ```
 
 This executes the generated script and writes `site_a.drawio` in the same folder. Open it in Draw.io (desktop or web).
@@ -170,5 +170,4 @@ Open `site_a.drawio` in Draw.io and move the nodes to where you want them. Save 
 
 The next time you run Step 4, `veeamdesigner.py` will read the updated positions from `site_a.drawio` and use them in the regenerated script. Your layout is preserved across iterations.
 
-
-
+**Project file format** 
