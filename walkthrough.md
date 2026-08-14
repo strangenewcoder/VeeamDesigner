@@ -129,7 +129,8 @@ Create the project file `samples\myproject\myproject.vd`, copying it from one of
 copy samples\example1\v4\example1.vd samples\myproject\myproject.vd
 ```
 
-This is a plain text file that lists all the systems involved in the project and their roles. See the **Project file format** section for the full specification.
+This is a plain text file that lists all the systems involved in the project and their roles.
+See the **Project file format** section for the full specification.
 
 ## Generate the schematic
 
