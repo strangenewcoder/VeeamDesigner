@@ -62,7 +62,7 @@ Starting from v3, the systems are manually rearranged into a clear, readable lay
 
 ## Environment setup
 
-Get the repository from GitHub and save it in a new folder. If you are unfamiliar with GitHub (like me, trust me), go to the repository's **Releases** tab, where you'll find a zip file for the release you want — download it.
+Get the repository from GitHub and save it in a new folder. If you are unfamiliar with GitHub (like me, trust me), go to the repository's **Tags** tab, where you'll find a zip file for the release you want — download it.
 
 Expand the content into a **VeeamDesigner** directory; that will be the root of the project.
 
@@ -81,7 +81,7 @@ Install the required modules:
 pip install beautifulsoup4 flask n2g
 ```
 
-Copy and customize, if needed, these setup sample files before first use:
+Copy and customize, if needed, these setup customize files first use:
 ```
 copy env.sample env.cmd
 copy utility\init_db\role_mappings_sample.py utility\init_db\role_mappings.py
