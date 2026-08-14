@@ -87,12 +87,13 @@ copy env.sample env.cmd
 copy utility\init_db\role_mappings_sample.py utility\init_db\role_mappings.py
 ```
 
-Edit `env.cmd` and set `PROJECTDIR` to the path where you extracted **VeeamDesigner** — the sample below uses `c:\projects\veeamdesigner` as an example.
-
 Then deactivate the virtual environment:
 ```
 call venv\scripts\deactivate.bat
 ```
+
+Edit `env.cmd` and set `PROJECTDIR` to the path where you extracted **VeeamDesigner** — the sample below uses `c:\projects\veeamdesigner` as an example.
+
 
 ### Sample env.cmd
 ```batch
@@ -109,8 +110,6 @@ call env.cmd
 ```
 `env.cmd` activates the virtual environment and sets the required environment variables.
 
-XXXXXXXXXX
-
 ## Create a new project
 
 Each project lives in its own subdirectory.
@@ -124,18 +123,24 @@ mkdir samples\myproject
 copy utility\init_db\veeamdesigner.db samples\myproject\myproject.db
 ```
 
-Create the project file `samples\myproject\myproject.vd`. This is a plain text file that lists all the systems involved in the project and their roles. See the **Project file format** section for the full specification.
+Create the project file `samples\myproject\myproject.vd`, copying it from one of the samples.
 
-#### Step 4 — Generate a drawing script
+```
+copy samples\example1\v4\example1.vd samples\myproject\myproject.vd
+```
+
+This is a plain text file that lists all the systems involved in the project and their roles. See the **Project file format** section for the full specification.
+
+## Generate the schematic
 
 Run `veeamdesigner.py` from inside the project folder, passing the project name and a drawing name:
 
 ```
 cd %PROJECTDIR%\samples\myproject
-python %PROJECTDIR%\veeamdesigner.py -p myproject -w site_a
+python %PROJECTDIR%\veeamdesigner.py -p myproject -w draw1
 ```
 
-This produces a Python script `site_a.py` in the current folder. The script, when executed, generates the Draw.io diagram `site_a.drawio`.
+This produces a Python script `draw1.py` in the current folder. The script, when executed, generates the Draw.io diagram `site_a.drawio`.
 
 What happens internally:
 
