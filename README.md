@@ -33,6 +33,14 @@ All trademarks and copyrights belong to their respective owners.
 
 ---
 
+## Graphical Elements
+
+| Component | Purpose |
+| :-- | :-- |
+| Veeam (https://www.veeam.com/company/brand-resource-center.html) | Veeam Brand Resource Center Architecture Icons |
+
+---
+
 ## Frontend libraries and assets
 
 | Component | Purpose |
@@ -40,6 +48,7 @@ All trademarks and copyrights belong to their respective owners.
 | [HTMX](https://htmx.org) | Dynamic partial page updates in Ports Explorer |
 | [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) | Monospace UI font |
 | [Syne](https://fonts.google.com/specimen/Syne) | Sans-serif UI font |
+
 
 Fonts are loaded through Google Fonts CDN.
 
@@ -62,6 +71,12 @@ These tools are not bundled with the project but are useful during development o
 | :-- | :-- |
 | [MagicPorts](https://magicports.veeambp.com/) | General inspiration for ports visualization and exploration workflows |
 | [Ports App Backend](https://github.com/shapedthought/ports_server) | Original inspiration/source for the database schema |
+
+---
+
+## Contibutors
+
+The code and documentation were developed, drafted and revised with assistance from Claude (Anthropic).
 
 ---
 

@@ -1,1 +1,0 @@
-rounded=0;whiteSpace=wrap;html=1;
