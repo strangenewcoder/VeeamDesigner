@@ -110,11 +110,13 @@ call env.cmd
 ```
 `env.cmd` activates the virtual environment and sets the required environment variables.
 
-## Create a new project
+## Create the first schematic
+
+### Create a new project
 
 Each project lives in its own subdirectory.
 
-Open a new command prompt, and go to the veeamdesigner root directory.
+Open a new command prompt, and go to the root directory of **VeeamDesigner**.
 
 Create the project folder (named **myproject** in this example) and copy the reference database into it:
 
@@ -126,13 +128,14 @@ copy utility\init_db\veeamdesigner.db samples\myproject\myproject.db
 Create the project file `samples\myproject\myproject.vd`, copying it from one of the samples.
 
 ```
-copy samples\example1\v4\example1.vd samples\myproject\myproject.vd
+copy samples\example1\v1\example1.vd samples\myproject\myproject.vd
 ```
 
 This is a plain text file that lists all the systems involved in the project and their roles.
+
 See the **Project file format** section for the full specification.
 
-## Generate the drawing script
+### Generate the drawing script
 
 Run `veeamdesigner.py` from inside the project folder, passing the project name and a drawing name:
 
@@ -152,22 +155,88 @@ What happens internally:
 
 ---
 
-## Run the drawing script
+### Run the drawing script
 
 ```
 python draw1.py
 ```
 
-This executes the generated script and writes `site_a.drawio` in the same folder. Open it in Draw.io (desktop or web).
+This executes the generated script and writes `draw1.drawio` in the same folder. Open it in Draw.io (desktop or web).
 
 On the first run, nodes are placed automatically: the first node starts at `x=300, y=300`, and each subsequent node is offset by 100 in both axes. The layout will be a diagonal staircase — this is intentional. You will rearrange it manually.
 
 ---
 
-#### Step 6 — Arrange the diagram in Draw.io
+### Arrange the diagram in Draw.io
 
-Open `site_a.drawio` in Draw.io and move the nodes to where you want them. Save the file.
+Open `draw1.drawio` in Draw.io and move the nodes to where you want them. Save the file.
 
-The next time you run Step 4, `veeamdesigner.py` will read the updated positions from `site_a.drawio` and use them in the regenerated script. Your layout is preserved across iterations.
+The next time you run Step 4, `veeamdesigner.py` will read the updated positions from `draw1.drawio` and use them in the regenerated script. Your layout of existing systems is preserved across iterations.
+
+### Extend my project
+
+Take an extended version of the project
+
+```
+copy samples\example1\v1\example1.vd samples\myproject\myproject.vd
+```
+
+and re-generate the drawing script and re-run the drawing script.
+
+```
+python %PROJECTDIR%\veeamdesigner.py -p myproject -w draw1
+python draw1.py
+```
+
+re-open `draw1.drawio` in Draw.io and you'll sse that the moved systems the first time will keep their position and the new one willbe are placed automatically.
 
 **Project file format** 
+
+A project file (`.vd`) is a plain text file that defines the systems involved in a design and their roles.
+
+#### Example
+
+```
+
+#always start with a comment line
+#if line begin with # is a comment
+#drawings;name;ip;role;mainrole
+draw1;VBRBACKUPSERVER01;192.168.42.1/24;VBRBACKUPSERVER;1
+draw1;VBRBACKUPSERVER01;;VBRCONSOLE;0
+draw1;VBRREPOWIN01;192.168.42.2/24;VBRMOUNTSERVER;1
+draw1;VBRREPOWIN01;;VBRBACKUPREPOSITORYWINDOWS;0
+draw1;VBRREPOWIN01;;VBRBACKUPREPOSITORY;0
+draw1;VBRREPOWIN01;;VBRPOWERNFS;0
+draw1;VC01;192.168.42.10/24;VMWAREVCENTER;1
+draw1;ESXI01;192.168.42.11/24;VMWAREESXI;1
+draw1;ESXI02;192.168.42.12/24;VMWAREESXI;1
+
+```
+
+#### Field reference
+
+| **Field** | **Description** |
+| :-- | :-- |
+| `drawings` | Drawing name(s) the system belongs to. Multiple names separated by commas. |
+| `name` | System name. |
+| `ip` | IP address. Defined only for the primary role; ignored for secondary roles. |
+| `role` | Role the system plays. Relationships are resolved via the database. |
+| `mainrole` | `1` = primary role, `0` = secondary role. |
+
+#### Notes
+
+- Lines starting with `#` are comments and are ignored by the parser.
+- A system can appear multiple times, once per role.
+- Drawing names must be unique and must not be substrings of each other, as the parser uses simple text matching.
+
+#### Example breakdown
+
+`VBRBACKUPSERVER01` has two roles: primary `VBRBACKUPSERVER` and secondary `VBRCONSOLE`.
+
+`VBRREPOWIN01` has one primary role (`VBRPOWERNFS`) and three secondary roles (`VBRBACKUPREPOSITORYWINDOWS`, `VBRBACKUPREPOSITORY`, `VBRMOUNTSERVER`).
+
+`VC01` is a vCenter server, `ESXI01` and `ESXI02` are ESXi hosts.
+
+All systems in this example belong to a drawing named `draw1`.
+
+---
