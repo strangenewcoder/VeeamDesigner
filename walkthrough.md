@@ -190,14 +190,13 @@ python draw1.py
 
 re-open `draw1.drawio` in Draw.io and you'll sse that the moved systems the first time will keep their position and the new one willbe are placed automatically.
 
-**Project file format** 
+## Project file format
 
 A project file (`.vd`) is a plain text file that defines the systems involved in a design and their roles.
 
-#### Example
+### Example
 
 ```
-
 #always start with a comment line
 #if line begin with # is a comment
 #drawings;name;ip;role;mainrole
@@ -210,10 +209,9 @@ draw1;VBRREPOWIN01;;VBRPOWERNFS;0
 draw1;VC01;192.168.42.10/24;VMWAREVCENTER;1
 draw1;ESXI01;192.168.42.11/24;VMWAREESXI;1
 draw1;ESXI02;192.168.42.12/24;VMWAREESXI;1
-
 ```
 
-#### Field reference
+### Field reference
 
 | **Field** | **Description** |
 | :-- | :-- |
@@ -223,13 +221,13 @@ draw1;ESXI02;192.168.42.12/24;VMWAREESXI;1
 | `role` | Role the system plays. Relationships are resolved via the database. |
 | `mainrole` | `1` = primary role, `0` = secondary role. |
 
-#### Notes
+### Notes
 
 - Lines starting with `#` are comments and are ignored by the parser.
 - A system can appear multiple times, once per role.
 - Drawing names must be unique and must not be substrings of each other, as the parser uses simple text matching.
 
-#### Example breakdown
+### Example breakdown
 
 `VBRBACKUPSERVER01` has two roles: primary `VBRBACKUPSERVER` and secondary `VBRCONSOLE`.
 
@@ -239,4 +237,163 @@ draw1;ESXI02;192.168.42.12/24;VMWAREESXI;1
 
 All systems in this example belong to a drawing named `draw1`.
 
----
+## Relations database
+
+I talked about a database containing the relationships between the Veeam system roles.
+But where i've got the info? The Veeam website at [Ports Reference](https://helpcenter.veeam.com/docs/vbr/userguide/used_ports.html?ver=13)
+But because i'me kind of lazy.. i created some tools to do it.
+
+### Scraping the database
+
+To recreate the database:
+
+1. Navigate to the extract ports info utility directory:
+
+   ```
+   cd %PROJECTDIR%\utility\extract_ports
+   ```
+
+2. Save the official Veeam ports documentation page in HTML format in this folder.
+
+3. Run the Python script `extract_ports.py` to parse the HTML and convert the data into txt:
+
+   ```
+   python extract_ports.py -i PortsVBR.html -p VBR > VBR13.scrape
+   ```
+
+   These parses the HTML, adds the product code, and saves the output to corresponding output files.
+
+4. Fix the scrape file.
+
+   Because the web page, is in many ways, to be processed to be parsed i've created a script that take the rule of processing saved in a regexp.txt file (the odd rows are the parts to be fixed, the even are the fix).
+
+   ```
+   python apply_replacements.py regexp.txt VBR13.scrape VBR13.csv
+   ```	
+
+5. Import the CSV into a new SQLite database (`veeamdesigner.db`), in a table named `all_ports`. This preserves the same schema as the original MagicPorts database.
+
+   To work with SQLite databases, I use [DB Browser for SQLite](https://sqlitebrowser.org), which makes creating a table from a CSV very straightforward.
+
+### Initializing the database
+
+While studying the database, I realized that the structure was not very query-friendly.
+In particular, the `sourceservice` and `targetservice` columns were more descriptive than relational keys.
+To improve this, I created a new table:
+
+```sql
+CREATE TABLE ports_definitions (
+    id            INTEGER PRIMARY KEY,
+    product       TEXT,
+    sourceservice TEXT,
+    targetservice TEXT,
+    protocol      TEXT,
+    original_port TEXT,
+    description   TEXT,
+    from_role     TEXT,
+    to_role       TEXT,
+    ports         TEXT
+);
+```
+
+This new table contains the original information, plus three additional columns:
+
+- `from_role` — normalized role code for the source service.
+- `to_role` — normalized role code for the target service.
+- `ports` — port information in a standardized format.
+
+Now we have to populate these fields:
+
+### Role mappings
+
+The concept is very simple: Every system in a Veeam infrastructure implements one or more roles, so the idea is to "map" one or more sourceservice (or targetservice) to a from_role (or to_role).
+
+The mappings from service names to role codes are defined in `role_mappings.py`:
+
+```python
+ROLE_MAPPINGS = {
+    "Backup server": "VBRBACKUPSERVER",
+    "%plug-in%": "VBRBACKUPSERVER",
+    "Veeam backup & replication console": "VBRCONSOLE",
+    "Backup repository": "VBRBACKUPREPOSITORY",
+    "Backup repository or gateway server": "VBRBACKUPREPOSITORY",
+    ...
+}
+```
+
+For example:
+
+- A service containing `"Backup server"` will be mapped to `"VBRBACKUPSERVER"`.
+- A service containing `"%plug-in%"` will also be mapped to `"VBRBACKUPSERVER"` (the `%` acts as a wildcard, matching any substring).
+
+The current mappings cover some common Veeam components, but the database contains many more service descriptions that are not yet mapped. It is expected and encouraged to explore the unmapped entries and extend `role_mappings.py` accordingly — the more complete the mappings, the more accurate the generated diagrams and firewall rules will be.
+
+To find unmapped entries, you can run this query in DB Browser for SQLite:
+
+```sql
+SELECT DISTINCT sourceservice FROM ports_definitions WHERE from_role = ''
+UNION
+SELECT DISTINCT targetservice FROM ports_definitions WHERE to_role = '';
+```
+
+#### Port normalization
+
+The `original_port` field contains port information in various formats found in the Veeam documentation. The `ports` field is populated with a normalized version of this data, handling cases such as:
+
+- If no digits found — descriptive string, return as-is.
+- Replace 'or' with comma.
+- Replace N+ patterns with 'N to N+1000' ranges.
+- Normalize dash ranges: N-N → N to N.
+- Parentheses: discard if starts with 'for'; keep if purely digits; extract first number if digits present; discard otherwise.
+- Normalize whitespace.
+- Normalize commas: remove spaces before comma, ensure one space after.
+- Split by comma or space into tokens.
+- Merge tokens around 'to' into ranges; discard non-numeric tokens.
+- Join with ', ' and strip trailing comma/whitespace.
+
+All this processing, and the creation of required tables for the rest of the project, are handled by `init_db.py`. 
+
+Navigate to the database initialization directory:
+
+```
+cd %PROJECTDIR%\utility\init_db
+```
+
+Run it, passing the database filename:
+
+```
+python init_db.py -f veeamdesigner.db
+```
+
+NB: The `veeamdesigner.db` was provided copying the file from `extract_ports` directory.
+
+This will recreate the tables needed in `veeamdesigner.db` and populate `ports_definitions` from `all_ports`.
+
+### Ports Explorer
+
+To explore the ports definitions, you can query the database, but i created PortsExplorer, a Flask/HTMX project.
+
+Navigate to the `portsexplorer` directory:
+
+```
+cd %PROJECTDIR%\portsexplorer
+```
+
+NB: The `veeamdesigner.db` was provided copying the file from `init_db` directory.
+
+Launch it with:
+
+```
+python portsexplorer.py -f veeamdesigner.db
+```
+
+This starts a local web server:
+
+```
+* Serving Flask app 'portsexplorer'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+```
+
+Connecting to the URL displayed in a browser, you can click on source and target roles to display the port relationships from and to the selected role. Clicking on a relationship shows the description of that connection.
