@@ -397,3 +397,26 @@ WARNING: This is a development server. Do not use it in a production deployment.
 ```
 
 Connecting to the URL displayed in a browser, you can click on source and target roles to display the port relationships from and to the selected role. Clicking on a relationship shows the description of that connection.
+
+## Shapes
+
+Each primary role needs a corresponding style file in the `styles/` folder. The filename must match the role identifier exactly (e.g. `VBRBACKUPSERVER.txt`). In fact the only need for a primary role is to choose the style for a system.
+
+If a style file is missing for a role, the generated script will not assign a style for that system.
+
+I've also created a utility to verify that all roles have a matching style file:
+
+Run the style checker, passing the database filename:
+
+```
+cd %PROJECTDIR%\check_styles
+python check_styles.py -f <DBFILENAME>
+```
+
+It generate a 'portfolio.py'
+
+```
+python portfolio.py
+```
+
+that create a ìportfolio.drawioì for the all the shapes styles.
