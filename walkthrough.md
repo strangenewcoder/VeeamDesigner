@@ -413,7 +413,7 @@ cd %PROJECTDIR%\check_styles
 python check_styles.py -f <DBFILENAME>
 ```
 
-It generate a 'portfolio.py'
+It generate a `portfolio.py`
 
 ```
 python portfolio.py
