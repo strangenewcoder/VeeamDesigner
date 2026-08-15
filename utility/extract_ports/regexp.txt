@@ -1,0 +1,82 @@
+Gateway server or backup server/					
+Gateway server or backup server.
+Gateway server/
+Gateway server,
+Backup server/
+Backup server,
+Gateway server (for on-premises backup repository in case of Veeam Data Cloud Vault) VM Guest OS
+Gateway server (for on-premises backup repository in case of Veeam Data Cloud Vault), VM Guest OS
+VM guest OS (VM with MS SQL, Oracle, or PostgreSQL)
+VM guest OS (VM with MS SQL/Oracle or PostgreSQL)
+Backup proxy /
+Backup proxy,
+Gateway server /
+Gateway server,
+( vbr.butler.veeam.com , autolk.veeam.com)
+(vbr.butler.veeam.com / autolk.veeam.com)
+( *.ss2.us , *.amazontrust.com )
+( *.ss2.us / *.amazontrust.com )
+dev.veeam.com , vbrad.butler.veeam.com , vbrce.butler.veeam.com
+dev.veeam.com / vbrad.butler.veeam.com / vbrce.butler.veeam.com
+gmail.googleapis.com, accounts.google.com, gstatic.com
+gmail.googleapis.com / accounts.google.com / gstatic.com
+graph.microsoft.com , login.microsoftonline.com
+graph.microsoft.com / login.microsoftonline.com
+Gateway server or Backup proxy
+Backup proxy, Gateway server
+Backup server or Gateway server
+Backup server, Gateway server
+TCP UDP
+TCP, UDP
+UDP, TCP
+TCP, UDP
+vCenter Server (VMware CDP - source and target; universal CDP - target)
+vCenter Server CDP (source),vCenter Server CDP (target), vCenter Server universal CDP (target)
+ESXi host (VMware CDP - source and target; universal CDP - target)
+ESXi CDP (source),ESXi CDP (target), ESXi universal CDP (target)
+ESXi host (source)
+ESXi CDP (source)
+ESXi host (target)
+ESXi CDP (target)
+Source workload
+Universal CDP Source
+CDP proxy (source and target)
+CDP proxy (source), CDP proxy (target)
+vCenter Server, ESXi host
+ESXi CDP (source),ESXi CDP (target),vCenter Server CDP (source),vCenter Server CDP (target)
+<storage-account>.blob.core.windows.net , <storage-account>.blob.storage.azure.net, vdc-vault-integration-prod.veeamdatacloud.com, cloud.veeam.com
+<storage-account>.blob.core.windows.net / <storage-account>.blob.storage.azure.net/ vdc-vault-integration-prod.veeamdatacloud.com / cloud.veeam.com
+Backup proxy (direct connection)/ Gateway server
+Backup proxy (direct connection), Gateway server
+login.microsoftonline.com , login.windows.net
+login.microsoftonline.com / login.windows.net
+Gateway server or backup server/
+Gateway server, backup server,
+*.amazonaws.com , *.amazonaws.com.cn
+*.amazonaws.com / *.amazonaws.com.cn
+<storage-account>.blob.core.windows.net , <storage-account>.blob.storage.azure.net , <storage-account>.blob.core.chinacloudapi.cn , <storage-account>.blob.core.usgovcloudapi.net
+<storage-account>.blob.core.windows.net / <storage-account>.blob.storage.azure.net / <storage-account>.blob.core.chinacloudapi.cn / <storage-account>.blob.core.usgovcloudapi.net
+ocsp.pki.goog , pki.goog , crl.pki.goog
+ocsp.pki.goog / pki.goog / crl.pki.goog
+Backup repository or
+Backup repository, 
+<storage-account>.blob.core.windows.net , <storage-account>.blob.storage.azure.net
+<storage-account>.blob.core.windows.net / <storage-account>.blob.storage.azure.net
+go.microsoft.com, aka.ms, github.com , objects.githubusercontent.com
+go.microsoft.com / aka.ms / github.com / objects.githubusercontent.com
+<storage-account>.queue.core.windows.net , <storage-account>.queue.storage.azure.net
+<storage-account>.queue.core.windows.net / <storage-account>.queue.storage.azure.net
+Gateway server or backup server. Amazon EC2 helper appliance
+Gateway server, backup server, Amazon EC2 helper appliance
+Gateway server or backup server. Instant Recovery to Azure helper appliance
+Gateway server, backup server, Instant Recovery to Azure helper appliance
+Gateway server or Backup server
+Gateway server, Backup server
+Backup proxy or Tape server
+Backup proxy, Tape server
+Veeam Data Cloud Vault) VM Guest OS
+Veeam Data Cloud Vault), VM Guest OS
+Backup repository Gateway server working with backup repository
+Backup repository, Gateway server working with backup repository
+Backup server or Backup repository
+Backup server, Backup repository

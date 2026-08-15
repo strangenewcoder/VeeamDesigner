@@ -125,7 +125,6 @@ def output_code_nodes(style_names):
     col = 1
 
     for name in sorted(style_names):
-        print(name)
         x_pos = str(auto_x)
         y_pos = str(auto_y)
         width = "60"
@@ -179,7 +178,6 @@ def write_portfolio_script(style_names, drawing_name):
 
     lines = output_code_begin()
 
-    print("here")
     lines += output_code_nodes(style_names)
 
     lines += output_code_end(drawing_file_name)
@@ -223,9 +221,6 @@ def main():
             eprint.eprint(
                 "\n[OK] All roles have a matching style file. No extra files found."
             )
-            # Write script to generate Draw.io
-            write_portfolio_script(style_names, "portfolio")
-            return
 
         if missing:
             eprint.eprint(f"\n[MISSING] {len(missing)} role(s) have no style file:")
@@ -238,6 +233,9 @@ def main():
             )
             for name in extra:
                 eprint.eprint(f"  - {name}.txt")
+                
+        # Write script to generate Draw.io
+        write_portfolio_script(style_names, "portfolio")
 
     except FileNotFoundError as err:
         eprint.eprint(f"[ERROR] {err}")
