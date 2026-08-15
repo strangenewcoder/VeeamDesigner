@@ -255,12 +255,18 @@ def populate_ports_definitions(db_conn):
         from_role = resolve_role(sourceservice)
         to_role   = resolve_role(targetservice)
 
+    If sourceservice contains multiple comma-separated values (e.g.
+    "aaa, bbb"), one row is inserted per value, each with its own
+    sourceservice / from_role, and the rest of the fields unchanged.
+    
+    If targetservice contains multiple comma-separated values (e.g.
+    "aaa, bbb"), one row is inserted per value, each with its own
+    targetservice / from_role, and the rest of the fields unchanged.
+
     Raises:
         sqlite3.OperationalError: if the all_ports table is missing.
     """
-
     cursor = db_conn.cursor()
-
     cursor.execute("""
         SELECT product, sourceservice, targetservice, protocol, port, description
         FROM all_ports
@@ -270,33 +276,44 @@ def populate_ports_definitions(db_conn):
     inserted = 0
     for product, sourceservice, targetservice, protocol, port, description in rows:
         ports = process_port(port)
-        from_role = resolve_role(sourceservice)
         to_role = resolve_role(targetservice)
 
-        cursor.execute(
-            """
-            INSERT INTO ports_definitions (
-                product, sourceservice, targetservice, protocol,
-                original_port, description, from_role, to_role, ports
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-            (
-                product,
-                sourceservice,
-                targetservice,
-                protocol,
-                port,
-                description,
-                from_role,
-                to_role,
-                ports,
-            ),
-        )
-        inserted += 1
+        # split sourceservice on commas, one row per value
+        source_values = [s.strip() for s in (sourceservice or "").split(",")]
+        source_values = [s for s in source_values if s] or [sourceservice]
+
+        for source_value in source_values:
+            from_role = resolve_role(source_value)
+
+            # split targetservice on commas, one row per value
+            target_values = [s.strip() for s in (targetservice or "").split(",")]
+            target_values = [s for s in target_values if s] or [targetservice]
+
+            for target_value in target_values:
+
+                cursor.execute(
+                    """
+                    INSERT INTO ports_definitions (
+                        product, sourceservice, targetservice, protocol,
+                        original_port, description, from_role, to_role, ports
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        product,
+                        source_value,
+                        target_value,
+                        protocol,
+                        port,
+                        description,
+                        from_role,
+                        to_role,
+                        ports,
+                    ),
+                )
+                inserted += 1
 
     db_conn.commit()
     cursor.close()
-
     eprint.eprint(f"[DB] Inserted {inserted} rows into 'ports_definitions'.")
 
 

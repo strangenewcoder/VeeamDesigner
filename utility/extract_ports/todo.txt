@@ -1,0 +1,29 @@
+83,84 x2 Gateway server (for on-premises backup repository in case of Veeam Data Cloud Vault) VM Guest OS
+479 Backup repository Gateway server working with backup repository
+490	Backup server or Backup repository
+
+Alletra 6000/Nimble storage system ???
+
+Google Cloud CRL distribution points (storage.googleapis.com) error in doc???
+
+Storage system = Universal Storage system ???
+No, ce ne sono parecchi e diversi !!!
+
+Hyper-V
+	Hyper-V server/Off-host backup proxy Split?	
+	Off-host backup proxy	solo 1
+	
+NAS filer (Dell PowerScale (formerly Isilon) or Nutanix Files storage system)
+
+select 
+	product,
+	sourceservice,
+	targetservice,
+	protocol,
+	original_port,
+	description,
+	from_role,
+	to_role,
+	ports
+from ports_definitions 
+			
