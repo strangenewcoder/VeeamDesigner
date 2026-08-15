@@ -188,7 +188,7 @@ python %PROJECTDIR%\veeamdesigner.py -p myproject -w draw1
 python draw1.py
 ```
 
-re-open `draw1.drawio` in Draw.io and you'll sse that the moved systems the first time will keep their position and the new one willbe are placed automatically.
+re-open `draw1.drawio` in Draw.io and you'll see that the moved systems the first time will keep their position, and the new one will be placed automatically.
 
 ## Project file format
 
@@ -237,11 +237,51 @@ draw1;ESXI02;192.168.42.12/24;VMWAREESXI;1
 
 All systems in this example belong to a drawing named `draw1`.
 
+### Multiple drawings per project
+
+Sometime the drawing can get crowded, so a project can have multiple drawings, each showing a different subset of systems or a different view of the infrastructure.
+
+The `drawings` field in the `.vd` file controls which systems appear in each drawing.
+
+Note: a system that belongs to both `draw1` and `draw2`, but the parser is very basic, so do not use drawing name where one name is contained in another.
+
+```
+#always start with a comment line
+#if line begin with # is a comment
+#drawings;name;ip;role;mainrole
+draw1,draw2;VBRBACKUPSERVER01;192.168.42.1/24;VBRBACKUPSERVER;1
+draw1,draw2;VBRBACKUPSERVER01;;VBRCONSOLE;0
+draw1;VBRREPOWIN01;192.168.42.2/24;VBRMOUNTSERVER;1
+draw1;VBRREPOWIN01;;VBRBACKUPREPOSITORYWINDOWS;0
+draw1;VBRREPOWIN01;;VBRBACKUPREPOSITORY;0
+draw1;VBRREPOWIN01;;VBRPOWERNFS;0
+draw1,draw2;VC01;192.168.42.10/24;VMWAREVCENTER;1
+draw1,draw2;ESXI01;192.168.42.11/24;VMWAREESXI;1
+draw1,draw2;ESXI02;192.168.42.12/24;VMWAREESXI;1
+```
+
+You can generate each drawing independently, from inside the project folder:
+
+```
+cd %PROJECTDIR%\samples\myproject
+python %PROJECTDIR%\veeamdesigner.py -p myproject -w draw1
+python %PROJECTDIR%\veeamdesigner.py -p myproject -w draw2
+```
+
+Each drawing has its own `.py` script and its own `.drawio` file.
+
+Note: Positions saved in `draw1.drawio` do not affect `draw2.drawio`.
+
+```
+python draw1.py
+python draw2.py
+```
+
 ## Relations database
 
 I talked about a database containing the relationships between the Veeam system roles.
-But where i've got the info? The Veeam website at [Ports Reference](https://helpcenter.veeam.com/docs/vbr/userguide/used_ports.html?ver=13)
-But because i'me kind of lazy.. i created some tools to do it.
+But where I've got the info? The Veeam website at [Ports Reference](https://helpcenter.veeam.com/docs/vbr/userguide/used_ports.html?ver=13)
+But because I'me kind of lazy.. i created some tools to do it.
 
 ### Scraping the database
 
@@ -413,10 +453,10 @@ cd %PROJECTDIR%\check_styles
 python check_styles.py -f <DBFILENAME>
 ```
 
-It generate a `portfolio.py`
+It generates a `portfolio.py`
 
 ```
 python portfolio.py
 ```
 
-that create a ìportfolio.drawioì for the all the shapes styles.
+that create a `portfolio.drawio` for the all the shapes styles.
