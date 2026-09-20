@@ -277,6 +277,20 @@ python draw1.py
 python draw2.py
 ```
 
+### Project exceptions
+
+Because the rules that build system mappings are quite broad, some links they generate aren't actually valid for a given drawing. To handle this, an **exceptions file** can be defined at drawing level to remove specific links.
+
+Each line lists two system names separated by a semicolon:
+
+```
+VBRBACKUPSERVER01;VBRREPOWIN01
+```
+
+This means `VBRBACKUPSERVER01` does **not** talk to `VBRREPOWIN01` — and the exclusion applies in both directions (i.e. `VBRREPOWIN01` is also excluded from talking to `VBRBACKUPSERVER01`).
+
+This file has an `.exc` extension, and is located in the project folder.
+
 ## Relations database
 
 I talked about a database containing the relationships between the Veeam system roles.
@@ -376,6 +390,29 @@ UNION
 SELECT DISTINCT targetservice FROM ports_definitions WHERE to_role = '';
 ```
 
+### Role propagation
+
+Some roles are logically related but weren't being treated consistently. For example, a **Windows Repository** was missing ports that a generic **Repository** role requires.
+
+To fix this without hardcoding these relationships, a `role_propagation` table was added:
+
+```sql
+CREATE TABLE role_propagation (
+    master_role TEXT,
+    added_role  TEXT
+)
+```
+
+Each row defines a rule: whenever a system has `master_role`, an additional entry with `added_role` is generated for it. For example:
+
+| master_role        | added_role  |
+|---------------------|-------------|
+| Windows Repository  | Repository  |
+
+This means every system tagged as a **Windows Repository** automatically also gets treated as a **Repository**, picking up the ports and mappings associated with that role — without needing to duplicate that configuration by hand for every "Windows X" variant.
+
+These rules are taken from a csv file and added to the database during initialization.
+
 #### Port normalization
 
 The `original_port` field contains port information in various formats found in the Veeam documentation. The `ports` field is populated with a normalized version of this data, handling cases such as:
@@ -449,7 +486,7 @@ I've also created a utility to verify that all roles have a matching style file:
 Run the style checker, passing the database filename:
 
 ```
-cd %PROJECTDIR%\check_styles
+cd %PROJECTDIR%\utility\check_styles
 python check_styles.py -f <DBFILENAME>
 ```
 

@@ -3,6 +3,7 @@ Create Veeam Design Diagram & Firewall configurations (POC).
 """
 
 import argparse
+import csv
 from collections import defaultdict
 import os
 import sqlite3
@@ -80,6 +81,39 @@ def opendb(file_name):
     return db_conn
 
 
+def propagate_system_roles(conn):
+    """
+    Propagate system roles using propagation_rules.
+    """
+
+    cur = conn.cursor()
+
+    # Get all propagation rules: master_role -> added_role
+    cur.execute("SELECT master_role, added_role FROM role_propagation")
+    propagation_rules = cur.fetchall()
+
+    if propagation_rules:
+
+        # Snapshot current systems rows (so we don't loop over what we're about to insert)
+        cur.execute("SELECT drawings, name, ip, role, mainrole FROM systems")
+        original_rows = cur.fetchall()
+
+        new_rows = []
+        for drawings, name, ip, role, mainrole in original_rows:
+            for master_role, added_role in propagation_rules:
+                if role == master_role:
+                    new_rows.append((drawings, name, "", added_role, 0))
+
+        if new_rows:
+            cur.executemany(
+                "INSERT INTO systems (drawings, name, ip, role, mainrole) VALUES (?, ?, ?, ?, ?)",
+                new_rows,
+            )
+        conn.commit()
+
+    cur.close()
+
+
 def loadsystems(file_name, drawing_name, db_conn):
     """
     Load systems from .vd file into the systems table,
@@ -132,6 +166,47 @@ def loadsystems(file_name, drawing_name, db_conn):
     db_conn.commit()
 
     eprint.eprint(f"[INFO] Loaded {rows_loaded} rows for drawing '{drawing_name}'.")
+
+
+def remove_excepted_mappings(db_conn, exceptions_file_name):
+    """
+    Remove excepted mappings
+    """
+
+    if not os.path.exists(exceptions_file_name):
+        eprint.eprint(f"[INFO] {exceptions_file_name} not found, skipping.")
+        return
+
+    cur = db_conn.cursor()
+
+    with open(exceptions_file_name, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f, delimiter=";")
+        exceptions = [tuple(row) for row in reader if row]
+
+    eprint.eprint(
+        f"[INFO] Loaded {len(exceptions)} exceptions from {exceptions_file_name}."
+    )
+
+    if not exceptions:
+        return
+
+    total_deleted = 0
+    for name_a, name_b in exceptions:
+        cur.execute(
+            """
+            DELETE FROM mappings
+            WHERE (from_name = ? AND to_name = ?)
+               OR (from_name = ? AND to_name = ?)
+            """,
+            (name_a, name_b, name_b, name_a),
+        )
+        total_deleted += cur.rowcount
+
+    eprint.eprint(f"[INFO] Removed {total_deleted} exceptions.")
+
+    db_conn.commit()
+
+    cur.close()
 
 
 def read_drawio(file_name):
@@ -220,14 +295,15 @@ def get_links(db_conn):
     cursor = db_conn.cursor()
     cursor.execute("""
         SELECT
-            s_from.name AS from_system,
-            s_to.name   AS to_system,
+            m.from_name AS from_system,
+            m.to_name   AS to_system,
             p.ports
-        FROM systems s_from
-        JOIN ports_definitions p ON s_from.role = p.from_role
-        JOIN systems s_to        ON s_to.role   = p.to_role
-        WHERE s_from.name != s_to.name
+        FROM mappings m
+        JOIN ports_definitions p
+            ON m.from_role = p.from_role
+            AND m.to_role   = p.to_role
     """)
+
     rows = cursor.fetchall()
     cursor.close()
 
@@ -418,12 +494,17 @@ def main():
 
     db_file_name = project_name + ".db"
     systems_file_name = project_name + ".vd"
+    exceptions_file_name = drawing_name + ".exc"
     drawing_file_name = drawing_name + ".drawio"
 
     try:
         db_conn = opendb(db_file_name)
+        # Propagate system roles
+        propagate_system_roles(db_conn)
         # Read the systems file
         loadsystems(systems_file_name, drawing_name, db_conn)
+        # Remove exceptions
+        remove_excepted_mappings(db_conn, exceptions_file_name)
         # Read the drawio.file
         drawing_content = read_drawio(drawing_file_name)
         # Read obj data from db
