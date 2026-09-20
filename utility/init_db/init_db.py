@@ -3,7 +3,9 @@ Initialize VeeamDesigner tables and populate ports_definitions.
 """
 
 import argparse
+import csv
 import os
+from pathlib import Path
 import re
 import sqlite3
 import sys
@@ -100,6 +102,15 @@ def create_tables(db_conn):
         )
     """)
     eprint.eprint("[DB] Table 'mappings' recreated.")
+
+    cursor.execute("DROP TABLE IF EXISTS role_propagation")
+    cursor.execute("""
+        CREATE TABLE role_propagation(
+            master_role  TEXT,
+            added_role TEXT
+        )
+    """)
+    eprint.eprint("[DB] Table 'role_propagation' recreated.")
 
     db_conn.commit()
     cursor.close()
@@ -243,6 +254,26 @@ def resolve_role(service):
     return role
 
 
+def populate_propagate_roles(db_conn, populate_propagate_file):
+    """
+    Populated the propagate_roles definitions.
+    """
+
+    cur = db_conn.cursor()
+
+    with open(populate_propagate_file, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f, delimiter=";")
+        rows = [tuple(row) for row in reader if row]  # skip empty lines
+
+    cur.executemany(
+        "INSERT INTO role_propagation (master_role, added_role) VALUES (?, ?)", rows
+    )
+    db_conn.commit()
+    eprint.eprint(f"[DB] populate_propagate_roles: Inserted {len(rows)} rows.")
+
+    cur.close()
+
+
 def populate_ports_definitions(db_conn):
     """
     Read all_ports and insert processed rows into ports_definitions.
@@ -258,7 +289,7 @@ def populate_ports_definitions(db_conn):
     If sourceservice contains multiple comma-separated values (e.g.
     "aaa, bbb"), one row is inserted per value, each with its own
     sourceservice / from_role, and the rest of the fields unchanged.
-    
+
     If targetservice contains multiple comma-separated values (e.g.
     "aaa, bbb"), one row is inserted per value, each with its own
     targetservice / from_role, and the rest of the fields unchanged.
@@ -266,6 +297,7 @@ def populate_ports_definitions(db_conn):
     Raises:
         sqlite3.OperationalError: if the all_ports table is missing.
     """
+
     cursor = db_conn.cursor()
     cursor.execute("""
         SELECT product, sourceservice, targetservice, protocol, port, description
@@ -317,6 +349,44 @@ def populate_ports_definitions(db_conn):
     eprint.eprint(f"[DB] Inserted {inserted} rows into 'ports_definitions'.")
 
 
+def propagate_roles(db_conn):
+    """
+    Propagate roles.
+    """
+
+    cur = db_conn.cursor()
+
+    # Get all propagation rules: master_role -> [added_role, ...]
+    cur.execute("SELECT master_role, added_role FROM role_propagation")
+    propagation_rules = cur.fetchall()
+
+    if not propagation_rules:
+        # if table is empty simply exit.
+        return
+
+    # Get current mappings (snapshot, so we don't loop over rows we're inserting)
+    cur.execute("SELECT from_name, from_role, to_name, to_role FROM mappings")
+    original_rows = cur.fetchall()
+
+    new_rows = []
+    for from_name, from_role, to_name, to_role in original_rows:
+        for master_role, added_role in propagation_rules:
+            if from_role == master_role:
+                new_rows.append((from_name, added_role, to_name, to_role))
+
+    if new_rows:
+        cur.executemany(
+            "INSERT INTO mappings (from_name, from_role, to_name, to_role) VALUES (?, ?, ?, ?)",
+            new_rows,
+        )
+        db_conn.commit()
+        eprint.eprint(f"Inserted {len(new_rows)} new rows.")
+    else:
+        eprint.eprint("No matching rows to propagate.")
+
+    cur.close()
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -330,11 +400,14 @@ def main():
     args = get_cli_arguments()
 
     db_file = args.dbfilename
+    propagate_roles_file = str(Path(db_file).with_suffix(".csv"))
 
     try:
         db_conn = opendb(db_file)
         create_tables(db_conn)
+        populate_propagate_roles(db_conn, propagate_roles_file)
         populate_ports_definitions(db_conn)
+        propagate_roles(db_conn)
         db_conn.close()
 
         eprint.eprint("[OK] Database initialized successfully.")
