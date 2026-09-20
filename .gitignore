@@ -213,6 +213,7 @@ venv/
 work/
 projects/
 env.cmd
+propagatedb.cmd
 role_mappings.py
 .~lock.*
 *.drawio.bkp
