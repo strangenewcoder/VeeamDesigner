@@ -103,14 +103,14 @@ def create_tables(db_conn):
     """)
     eprint.eprint("[DB] Table 'mappings' recreated.")
 
-    cursor.execute("DROP TABLE IF EXISTS role_propagation")
+    cursor.execute("DROP TABLE IF EXISTS role_propagations")
     cursor.execute("""
-        CREATE TABLE role_propagation(
+        CREATE TABLE role_propagations(
             master_role  TEXT,
             added_role TEXT
         )
     """)
-    eprint.eprint("[DB] Table 'role_propagation' recreated.")
+    eprint.eprint("[DB] Table 'role_propagations' recreated.")
 
     db_conn.commit()
     cursor.close()
@@ -254,22 +254,22 @@ def resolve_role(service):
     return role
 
 
-def populate_propagate_roles(db_conn, populate_propagate_file):
+def populate_role_propagations(db_conn, role_propagations_file):
     """
-    Populated the propagate_roles definitions.
+    Populated the role_propagations definitions.
     """
 
     cur = db_conn.cursor()
 
-    with open(populate_propagate_file, newline="", encoding="utf-8") as f:
+    with open(role_propagations_file, newline="", encoding="utf-8") as f:
         reader = csv.reader(f, delimiter=";")
         rows = [tuple(row) for row in reader if row]  # skip empty lines
 
     cur.executemany(
-        "INSERT INTO role_propagation (master_role, added_role) VALUES (?, ?)", rows
+        "INSERT INTO role_propagations (master_role, added_role) VALUES (?, ?)", rows
     )
     db_conn.commit()
-    eprint.eprint(f"[DB] populate_propagate_roles: Inserted {len(rows)} rows.")
+    eprint.eprint(f"[DB] populate_role_propagations: Inserted {len(rows)} rows.")
 
     cur.close()
 
@@ -349,6 +349,32 @@ def populate_ports_definitions(db_conn):
     eprint.eprint(f"[DB] Inserted {inserted} rows into 'ports_definitions'.")
 
 
+def populate_custom_ports_definitions(db_conn, custom_ports_definitions_file):
+    """
+    Populates the ports_definitions table from a custom port definitions CSV file.
+    """
+
+    cur = db_conn.cursor()
+
+    with open(custom_ports_definitions_file, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f, delimiter=";")
+        rows = [tuple(row) for row in reader if row]  # skip empty lines
+
+    cur.executemany(
+        """
+        INSERT INTO ports_definitions (
+            product, sourceservice, targetservice, protocol,
+            original_port, description, from_role, to_role, ports
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        rows,
+    )
+    db_conn.commit()
+    eprint.eprint(f"[DB] populate_custom_ports_definitions: Inserted {len(rows)} rows.")
+
+    cur.close()
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -362,13 +388,15 @@ def main():
     args = get_cli_arguments()
 
     db_file = args.dbfilename
-    propagate_roles_file = str(Path(db_file).with_suffix(".csv"))
+    role_propagations_file = str(Path(db_file).with_suffix(".csv"))
+    custom_ports_definitions_file = str(Path(db_file).with_suffix(".ports"))
 
     try:
         db_conn = opendb(db_file)
         create_tables(db_conn)
-        populate_propagate_roles(db_conn, propagate_roles_file)
+        populate_role_propagations(db_conn, role_propagations_file)
         populate_ports_definitions(db_conn)
+        populate_custom_ports_definitions(db_conn, custom_ports_definitions_file)
         db_conn.close()
 
         eprint.eprint("[OK] Database initialized successfully.")

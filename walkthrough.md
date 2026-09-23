@@ -390,14 +390,39 @@ UNION
 SELECT DISTINCT targetservice FROM ports_definitions WHERE to_role = '';
 ```
 
-### Role propagation
+#### Port normalization
+
+The `original_port` field contains port information in various formats found in the Veeam documentation. The `ports` field is populated with a normalized version of this data, handling cases such as:
+
+- If no digits found — descriptive string, return as-is.
+- Replace 'or' with comma.
+- Replace N+ patterns with 'N to N+1000' ranges.
+- Normalize dash ranges: N-N → N to N.
+- Parentheses: discard if starts with 'for'; keep if purely digits; extract first number if digits present; discard otherwise.
+- Normalize whitespace.
+- Normalize commas: remove spaces before comma, ensure one space after.
+- Split by comma or space into tokens.
+- Merge tokens around 'to' into ranges; discard non-numeric tokens.
+- Join with ', ' and strip trailing comma/whitespace.
+
+### Custom port definitions
+
+To add port definitions that are not specific to Veeam, into the `ports_definitions` table can be added some custom roles
+
+like this one for VMware.
+
+"VBR";"Esxi Host";"vCenter";"TCP";"443";"Host to vCenter";"VMWAREESXI";"VMWAREVCENTER";"443"
+
+These definitions are taken from a csv (with the `extension ports`)  file and added to the table during initialization.
+
+### Role propagations
 
 Some roles are logically related but weren't being treated consistently. For example, a **Windows Repository** was missing ports that a generic **Repository** role requires.
 
-To fix this without hardcoding these relationships, a `role_propagation` table was added:
+To fix this without hardcoding these relationships, a `role_propagations` table was added:
 
 ```sql
-CREATE TABLE role_propagation (
+CREATE TABLE role_propagations (
     master_role TEXT,
     added_role  TEXT
 )
@@ -413,20 +438,6 @@ This means every system tagged as a **Windows Repository** automatically also ge
 
 These rules are taken from a csv file and added to the database during initialization.
 
-#### Port normalization
-
-The `original_port` field contains port information in various formats found in the Veeam documentation. The `ports` field is populated with a normalized version of this data, handling cases such as:
-
-- If no digits found — descriptive string, return as-is.
-- Replace 'or' with comma.
-- Replace N+ patterns with 'N to N+1000' ranges.
-- Normalize dash ranges: N-N → N to N.
-- Parentheses: discard if starts with 'for'; keep if purely digits; extract first number if digits present; discard otherwise.
-- Normalize whitespace.
-- Normalize commas: remove spaces before comma, ensure one space after.
-- Split by comma or space into tokens.
-- Merge tokens around 'to' into ranges; discard non-numeric tokens.
-- Join with ', ' and strip trailing comma/whitespace.
 
 All this processing, and the creation of required tables for the rest of the project, are handled by `init_db.py`. 
 
