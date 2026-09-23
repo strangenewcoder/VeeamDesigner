@@ -434,7 +434,7 @@ Each row defines a rule: whenever a system has `master_role`, an additional entr
 |---------------------|-------------|
 | Windows Repository  | Repository  |
 
-This means every system tagged as a **Windows Repository** automatically also gets treated as a **Repository**, picking up the ports and mappings associated with that role — without needing to duplicate that configuration by hand for every "Windows X" variant.
+This means every system tagged as a **Windows Repository** automatically also gets treated also as a **Repository**, picking up the ports and mappings associated with that role — without needing to duplicate that configuration by hand for every "Windows X" variant.
 
 These rules are taken from a csv file and added to the database during initialization.
 
