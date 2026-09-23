@@ -97,8 +97,10 @@ def create_tables(db_conn):
         CREATE TABLE mappings (
             from_name  TEXT,
             from_role  TEXT,
+            from_ip    TEXT,
             to_name    TEXT,
-            to_role    TEXT
+            to_role    TEXT,
+            to_ip      TEXT
         )
     """)
     eprint.eprint("[DB] Table 'mappings' recreated.")

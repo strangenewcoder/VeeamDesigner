@@ -85,7 +85,7 @@ def propagate_system_roles(conn):
     """
     Propagate system roles using propagation_rules.
     """
-    
+
     cur = conn.cursor()
 
     # Get all propagation rules: master_role -> added_role
@@ -99,11 +99,11 @@ def propagate_system_roles(conn):
         original_rows = cur.fetchall()
 
         new_rows = []
-        for drawings, name, ip, role, mainrole in original_rows:         
+        for drawings, name, ip, role, mainrole in original_rows:
             for master_role, added_role in propagation_rules:
                 if role == master_role:
                     new_rows.append((drawings, name, "", added_role, 0))
-        
+
         if new_rows:
             cur.executemany(
                 "INSERT INTO systems (drawings, name, ip, role, mainrole) VALUES (?, ?, ?, ?, ?)",
@@ -151,16 +151,26 @@ def loadsystems(file_name, drawing_name, db_conn):
     # loading the mappings
     cursor.execute("DELETE FROM mappings;")
     cursor.execute("""
-        INSERT INTO mappings (from_name, from_role, to_name, to_role)
+        INSERT INTO mappings (from_name, from_role, from_ip, to_name, to_role, to_ip)
         SELECT DISTINCT
             s_from.name AS from_name,
             s_from.role AS from_role,
+            ip_from.ip  AS from_ip,
             s_to.name   AS to_name,
-            s_to.role   AS to_role
+            s_to.role   AS to_role,
+            ip_to.ip    AS to_ip
         FROM systems s_from
         JOIN ports_definitions p ON s_from.role = p.from_role
         JOIN systems s_to        ON s_to.role   = p.to_role
-        WHERE s_from.name != s_to.name
+        LEFT JOIN systems ip_from
+            ON ip_from.name = s_from.name
+            AND ip_from.drawings = s_from.drawings
+            AND ip_from.mainrole = 1
+        LEFT JOIN systems ip_to
+            ON ip_to.name = s_to.name
+            AND ip_to.drawings = s_to.drawings
+        AND ip_to.mainrole = 1
+		WHERE s_from.name != s_to.name
     """)
 
     db_conn.commit()
@@ -172,18 +182,20 @@ def remove_excepted_mappings(db_conn, exceptions_file_name):
     """
     Remove excepted mappings
     """
-    
+
     if not os.path.exists(exceptions_file_name):
         eprint.eprint(f"[INFO] {exceptions_file_name} not found, skipping.")
         return
-        
+
     cur = db_conn.cursor()
-    
-    with open(exceptions_file_name, newline='', encoding='utf-8') as f:
-        reader = csv.reader(f, delimiter=';')
+
+    with open(exceptions_file_name, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f, delimiter=";")
         exceptions = [tuple(row) for row in reader if row]
-        
-    eprint.eprint(f"[INFO] Loaded {len(exceptions)} exceptions from {exceptions_file_name}.")
+
+    eprint.eprint(
+        f"[INFO] Loaded {len(exceptions)} exceptions from {exceptions_file_name}."
+    )
 
     if not exceptions:
         return
@@ -196,14 +208,14 @@ def remove_excepted_mappings(db_conn, exceptions_file_name):
             WHERE (from_name = ? AND to_name = ?)
                OR (from_name = ? AND to_name = ?)
             """,
-            (name_a, name_b, name_b, name_a)
+            (name_a, name_b, name_b, name_a),
         )
         total_deleted += cur.rowcount
-        
+
     eprint.eprint(f"[INFO] Removed {total_deleted} exceptions.")
-        
+
     db_conn.commit()
-    
+
     cur.close()
 
 
@@ -301,7 +313,7 @@ def get_links(db_conn):
             ON m.from_role = p.from_role
             AND m.to_role   = p.to_role
     """)
-           
+
     rows = cursor.fetchall()
     cursor.close()
 
@@ -396,7 +408,8 @@ def get_links_2(db_conn):
         result.append((from_system, from_ip, to_system, to_ip, formatted))
 
     return result
-    
+
+
 def output_code_begin():
     """
     Returns the header lines of the generated Python script as a list of strings.
@@ -545,8 +558,9 @@ def output_firewall_2(links_data):
     lines = []
     for from_sys, from_ip, to_sys, to_ip, ports in links_data:
         lines.append(f'"{from_sys}", "{from_ip}", "{to_sys}", "{to_ip}", "{ports}"')
-    return lines 
-    
+    return lines
+
+
 def main():
     """
     Main function.
@@ -581,7 +595,7 @@ def main():
         # Propagate system roles
         propagate_system_roles(db_conn)
         # Remove exceptions
-        remove_excepted_mappings(db_conn, exceptions_file_name)   
+        remove_excepted_mappings(db_conn, exceptions_file_name)
         # Read the drawio.file
         drawing_content = read_drawio(drawing_file_name)
         # Read obj data from db
@@ -602,9 +616,9 @@ def main():
             # Generate firewall rule list
             for line in output_firewall(links_data):
                 print(line)
-                
-            print ()
-            
+
+            print()
+
             for line in output_firewall_2(links_data_2):
                 print(line)
 
