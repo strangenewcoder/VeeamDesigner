@@ -312,6 +312,7 @@ def get_links(db_conn):
         JOIN ports_definitions p
             ON m.from_role = p.from_role
             AND m.to_role   = p.to_role
+        WHERE from_system != to_system
     """)
 
     rows = cursor.fetchall()
@@ -367,6 +368,7 @@ def get_links_2(db_conn):
         JOIN systems s_to
             ON s_to.name = m.to_name
             AND s_to.mainrole = 1
+		WHERE from_system != to_system
     """)
 
     rows = cursor.fetchall()
