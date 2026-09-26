@@ -390,7 +390,7 @@ def main():
     args = get_cli_arguments()
 
     db_file = args.dbfilename
-    role_propagations_file = str(Path(db_file).with_suffix(".csv"))
+    role_propagations_file = str(Path(db_file).with_suffix(".props"))
     custom_ports_definitions_file = str(Path(db_file).with_suffix(".ports"))
 
     try:

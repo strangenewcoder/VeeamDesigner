@@ -436,7 +436,7 @@ Each row defines a rule: whenever a system has `master_role`, an additional entr
 
 This means every system tagged as a **Windows Repository** automatically also gets treated also as a **Repository**, picking up the ports and mappings associated with that role — without needing to duplicate that configuration by hand for every "Windows X" variant.
 
-These rules are taken from a csv file and added to the database during initialization.
+These rules are taken from a text file (props extension) file and added to the database during initialization.
 
 
 All this processing, and the creation of required tables for the rest of the project, are handled by `init_db.py`. 
