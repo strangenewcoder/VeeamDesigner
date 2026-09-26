@@ -1,1 +1,5 @@
-"VBR";"Esxi Host";"vCenter";"TCP";"443";"Host to vCenter";"VMWAREESXI";"VMWAREVCENTER";"443"
+"VMWARE";"Esxi Host";"Esxi Host";"TCP";"8000";"vMotion";"VMWAREESXI";"VMWAREESXI";"8000"
+"VMWARE";"Esxi Host";"vCenter";"UDP";"902";"Core management communications between vCenter Server and ESXi (vpxd)";"VMWAREESXI";"VMWAREVCENTER";"902"
+"VMWARE";"Esxi Host";"vCenter";"TCP";"9084";"vSphere Lifecycle Manager Communications";"VMWAREESXI";"VMWAREVCENTER";"9084"
+"VMWARE";"vCenter";"Esxi Host";"TCP";"902";"Core management communications between vCenter Server and ESXi (vpxd)";"VMWAREVCENTER";"VMWAREESXI";"902"
+"VMWARE";"vCenter";"Esxi Host";"TCP";"80, 9000";"vSphere Lifecycle Manager/Update Manager Communications - Redirect requests from HTTP to HTTPS";"VMWAREVCENTER";"VMWAREESXI";"80, 9000"
