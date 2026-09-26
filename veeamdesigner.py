@@ -5,6 +5,7 @@ Create Veeam Design Diagram & Firewall configurations (POC).
 import argparse
 import csv
 from collections import defaultdict
+import ipaddress
 import os
 import sqlite3
 import sys
@@ -46,6 +47,13 @@ def get_cli_arguments():
         help="Enable firewall rules output.",
     )
     parser.add_argument(
+        "-s",
+        "--filter-same-subnet",
+        default=False,
+        action="store_true",
+        help="Exclude links where from_ip and to_ip are in the same subnet.",
+    )
+    parser.add_argument(
         "-d",
         "--debug",
         default=False,
@@ -54,6 +62,18 @@ def get_cli_arguments():
     )
 
     return parser.parse_args()
+
+
+def same_subnet(ip_a, ip_b):
+    """
+    check if ip_a amd ip_b are in the same subnet.
+    """
+    try:
+        net_a = ipaddress.ip_interface(ip_a).network
+        net_b = ipaddress.ip_interface(ip_b).network
+        return net_a == net_b
+    except ValueError:
+        return False
 
 
 def opendb(file_name):
@@ -89,7 +109,7 @@ def propagate_system_roles(conn):
     cur = conn.cursor()
 
     # Get all propagation rules: master_role -> added_role
-    cur.execute("SELECT master_role, added_role FROM role_propagation")
+    cur.execute("SELECT master_role, added_role FROM role_propagations")
     propagation_rules = cur.fetchall()
 
     if propagation_rules:
@@ -147,6 +167,9 @@ def loadsystems(file_name, drawing_name, db_conn):
                     (drawings, name, ip if ip else None, role, int(mainrole)),
                 )
                 rows_loaded += 1
+
+    # Propagate system roles
+    propagate_system_roles(db_conn)
 
     # loading the mappings
     cursor.execute("DELETE FROM mappings;")
@@ -299,51 +322,6 @@ def get_objs(db_conn):
 def get_links(db_conn):
     """
     Returns a deduplicated, sorted list of directed links between systems.
-    Each row: (from_system, to_system, ports)
-    """
-
-    cursor = db_conn.cursor()
-    cursor.execute("""
-        SELECT
-            m.from_name AS from_system,
-            m.to_name   AS to_system,
-            p.ports
-        FROM mappings m
-        JOIN ports_definitions p
-            ON m.from_role = p.from_role
-            AND m.to_role   = p.to_role
-        WHERE from_system != to_system
-    """)
-
-    rows = cursor.fetchall()
-    cursor.close()
-
-    link_ports = defaultdict(set)
-    for from_system, to_system, ports in rows:
-        # split "445, 135" into individual ports before adding to set
-        for port in ports.split(","):
-            link_ports[(from_system, to_system)].add(port.strip())
-
-    def sort_ports(port_set):
-        singles = sorted(
-            [p for p in port_set if " to " not in p],
-            key=lambda p: int(p.replace(" ", "").split(",")[0]),
-        )
-        ranges = sorted(
-            [p for p in port_set if " to " in p],
-            key=lambda p: int(p.split(" to ")[0].strip()),
-        )
-        return ", ".join(singles + ranges)
-
-    return [
-        (from_system, to_system, sort_ports(port_set))
-        for (from_system, to_system), port_set in link_ports.items()
-    ]
-
-
-def get_links_2(db_conn):
-    """
-    Returns a deduplicated, sorted list of directed links between systems.
     Each row: (from_system, from_ip, to_system, to_ip, ports)
     Each port/range is individually suffixed with its protocol(s) when not just TCP,
     e.g. "111 (TCP, UDP), 1058 to 2058 (TCP, UDP), 443".
@@ -476,30 +454,38 @@ def output_code_nodes(db_obj_data, drawing_content):
     return lines
 
 
-def output_code_links(link_data):
+def output_code_links(link_data, filter_same_subnet):
     """
     Returns the add_link lines of the generated Python script as a list of strings.
     """
 
-    link_index = {(from_sys, to_sys): ports for from_sys, to_sys, ports in link_data}
+    link_index = {
+        (from_sys, to_sys): ports
+        for from_sys, from_ip, to_sys, to_ip, ports in link_data
+    }
 
     lines = []
     visited = set()
 
-    for from_sys, to_sys, ports in link_data:
+    for from_sys, from_ip, to_sys, to_ip, ports in link_data:
         if (from_sys, to_sys) in visited:
             continue
 
-        reverse_ports = link_index.get((to_sys, from_sys), "")
+        if filter_same_subnet and same_subnet(from_ip, to_ip):
+            lines.append(f'diagram.add_link("{from_sys}","{to_sys}")')
 
-        kwargs = []
-        if reverse_ports:
-            kwargs.append(f'src_label="{reverse_ports}"')
-        if ports:
-            kwargs.append(f'trgt_label="{ports}"')
+        else:
+            reverse_ports = link_index.get((to_sys, from_sys), "")
 
-        kwargs_str = ",".join(kwargs)
-        lines.append(f'diagram.add_link("{from_sys}","{to_sys}",{kwargs_str})')
+            kwargs = []
+            if reverse_ports:
+                kwargs.append(f'src_label="{reverse_ports}"')
+            if ports:
+                kwargs.append(f'trgt_label="{ports}"')
+
+            kwargs_str = ",".join(kwargs)
+
+            lines.append(f'diagram.add_link("{from_sys}","{to_sys}",{kwargs_str})')
 
         visited.add((from_sys, to_sys))
         visited.add((to_sys, from_sys))
@@ -522,7 +508,12 @@ def output_code_end(drawing_file_name):
 
 
 def write_script(
-    drawing_name, drawing_file_name, drawing_content, db_obj_data, links_data
+    drawing_name,
+    drawing_file_name,
+    drawing_content,
+    db_obj_data,
+    links_data,
+    filter_same_subnet,
 ):
     """
     Assemble and write the generated Python script to <drawing_name>.py.
@@ -532,7 +523,7 @@ def write_script(
 
     lines = output_code_begin()
     lines += output_code_nodes(db_obj_data, drawing_content)
-    lines += output_code_links(links_data)
+    lines += output_code_links(links_data, filter_same_subnet)
     lines += output_code_end(drawing_file_name)
 
     with open(script_file, "w", encoding="utf-8") as f:
@@ -541,24 +532,17 @@ def write_script(
     eprint.eprint(f"[INFO] Script generated: {script_file}")
 
 
-def output_firewall(links_data):
-    """
-    One firewall rule per directed pair, ports already deduplicated and sorted.
-    """
-
-    lines = []
-    for from_sys, to_sys, ports in links_data:
-        lines.append(f'"{from_sys}", "{to_sys}", "{ports}"')
-    return lines
-
-
-def output_firewall_2(links_data):
+def output_firewall(links_data, filter_same_subnet):
     """
     One firewall rule per directed pair, ports already deduplicated and sorted.
     """
 
     lines = []
     for from_sys, from_ip, to_sys, to_ip, ports in links_data:
+
+        if filter_same_subnet and same_subnet(from_ip, to_ip):
+            continue
+
         lines.append(f'"{from_sys}", "{from_ip}", "{to_sys}", "{to_ip}", "{ports}"')
     return lines
 
@@ -574,6 +558,7 @@ def main():
     drawing_name = args.drawing
     drawio_output = args.drawio
     firewall_output = args.firewall
+    filter_same_subnet = args.filter_same_subnet
 
     eprint.set_debug(args.debug)
 
@@ -594,8 +579,6 @@ def main():
         db_conn = opendb(db_file_name)
         # Read the systems file
         loadsystems(systems_file_name, drawing_name, db_conn)
-        # Propagate system roles
-        propagate_system_roles(db_conn)
         # Remove exceptions
         remove_excepted_mappings(db_conn, exceptions_file_name)
         # Read the drawio.file
@@ -604,7 +587,6 @@ def main():
         db_obj_data = get_objs(db_conn)
         # Read links data from db
         links_data = get_links(db_conn)
-        links_data_2 = get_links_2(db_conn)
         if drawio_output:
             # Write script to generate Draw.io
             write_script(
@@ -613,15 +595,10 @@ def main():
                 drawing_content,
                 db_obj_data,
                 links_data,
+                filter_same_subnet,
             )
         else:
-            # Generate firewall rule list
-            for line in output_firewall(links_data):
-                print(line)
-
-            print()
-
-            for line in output_firewall_2(links_data_2):
+            for line in output_firewall(links_data, filter_same_subnet):
                 print(line)
 
     except FileNotFoundError as err:
