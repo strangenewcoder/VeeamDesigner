@@ -1,0 +1,21 @@
+{% if is_partial %}
+<span id="col1-badge" class="badge" hx-swap-oob="true">{{ roles|length }}</span>
+{% endif %}
+{% if roles %}
+  {% for role in roles %}
+  <div class="list-row"
+       hx-get="/to_roles"
+       hx-vals='{"from_role": "{{ role }}", "swapped": "{{ "1" if swapped else "0" }}"}'
+       hx-target="#col2"
+       hx-swap="innerHTML"
+       hx-trigger="click"
+       onclick="selectRow(this, 'col1')">
+    {{ role }}
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <div class="icon">∅</div>
+    No roles found
+  </div>
+{% endif %}

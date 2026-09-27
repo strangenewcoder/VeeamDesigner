@@ -132,6 +132,22 @@
     .dot.orange { background: var(--accent2); }
     .dot.dim    { background: var(--text-dim); }
 
+    .swap-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      border-radius: 4px;
+      padding: 1px 7px;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1.6;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .swap-btn:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
     .panel-body {
       flex: 1 1 0;
       overflow-y: auto;
@@ -288,38 +304,29 @@
   <!-- Top: 3 columns -->
   <div id="top">
 
-    <!-- Column 1: from_role -->
+    <!-- Column 1: from_role (or to_role, when swapped) -->
     <div class="panel">
       <div class="panel-header">
         <span class="dot"></span>
-        <span class="panel-title">Source Role</span>
-        <span class="badge">{{ roles|length }}</span>
+        <span class="panel-title" id="col1-title">Source Role</span>
+        <span class="badge" id="col1-badge">{{ roles|length }}</span>
+        <button class="swap-btn" onclick="toggleSwap()" title="Swap columns">⇄</button>
       </div>
-      <div class="panel-body">
-        {% for role in roles %}
-        <div class="list-row"
-             hx-get="/to_roles"
-             hx-vals='{"from_role": "{{ role }}"}'
-             hx-target="#col2"
-             hx-swap="innerHTML"
-             hx-trigger="click"
-             onclick="selectRow(this, 'col1')">
-          {{ role }}
-        </div>
-        {% endfor %}
+      <div id="col1" class="panel-body">
+        {% include "partials/roles.html" %}
       </div>
     </div>
 
-    <!-- Column 2: to_role -->
+    <!-- Column 2: to_role (or from_role, when swapped) -->
     <div class="panel">
       <div class="panel-header">
         <span class="dot"></span>
-        <span class="panel-title">Target Role</span>
+        <span class="panel-title" id="col2-title">Target Role</span>
       </div>
       <div id="col2" class="panel-body">
         <div class="empty-state">
           <div class="icon">↑</div>
-          Select a source role
+          Select a role
         </div>
       </div>
     </div>
@@ -358,6 +365,24 @@
 </div>
 
 <script>
+  let swapped = false;
+
+  function toggleSwap() {
+    swapped = !swapped;
+
+    document.getElementById('col1-title').textContent = swapped ? 'Target Role' : 'Source Role';
+    document.getElementById('col2-title').textContent = swapped ? 'Source Role' : 'Target Role';
+
+    document.getElementById('col2').innerHTML =
+      '<div class="empty-state"><div class="icon">↑</div>Select a role</div>';
+    document.getElementById('col3').innerHTML =
+      '<div class="empty-state"><div class="icon">↑</div>Select source &amp; target roles</div>';
+    document.getElementById('col4').innerHTML =
+      '<div class="empty-state">Select a port entry to see matching rules</div>';
+
+    htmx.ajax('GET', `/roles?swapped=${swapped ? 1 : 0}`, '#col1');
+  }
+
   function selectRow(el, colId) {
     const body = el.closest('.panel-body') || el.parentNode;
     body.querySelectorAll('.list-row').forEach(r => {

@@ -48,7 +48,36 @@ def index():
     roles = db.execute(
         "SELECT DISTINCT from_role FROM ports_definitions WHERE from_role != '' ORDER BY from_role"
     ).fetchall()
-    return render_template("index.html", roles=[r["from_role"] for r in roles])
+    return render_template(
+        "index.html", roles=[r["from_role"] for r in roles], swapped=False
+    )
+
+
+@app.route("/roles")
+def roles():
+    """
+    /roles route — (re)populates column 1.
+
+    Normally column 1 lists distinct `from_role` values. When `swapped=1`
+    is passed, column 1 instead lists distinct `to_role` values, so the
+    user can drive the exploration from the other direction.
+    """
+
+    swapped = request.args.get("swapped", "0") == "1"
+    db = get_db()
+    column = "to_role" if swapped else "from_role"
+    # `column` is always one of the two hardcoded literals above, never
+    # user input, so this is safe to interpolate into the SQL string.
+    rows = db.execute(
+        f"SELECT DISTINCT {column} FROM ports_definitions "
+        f"WHERE {column} != '' ORDER BY {column}"
+    ).fetchall()
+    return render_template(
+        "partials/roles.html",
+        roles=[r[column] for r in rows],
+        swapped=swapped,
+        is_partial=True,
+    )
 
 
 @app.route("/to_roles")
@@ -56,18 +85,35 @@ def to_roles():
     """/to_roles route."""
 
     from_role = request.args.get("from_role", "")
+    swapped = request.args.get("swapped", "0") == "1"
     db = get_db()
-    rows = db.execute(
-        """
-        SELECT DISTINCT to_role FROM ports_definitions
-        WHERE from_role = ? AND to_role != ''
-        ORDER BY to_role
-        """,
-        (from_role,),
-    ).fetchall()
+
+    if swapped:
+        # Column 1 held `to_role` values, so look up the related
+        # `from_role` values for column 2.
+        rows = db.execute(
+            """
+            SELECT DISTINCT from_role FROM ports_definitions
+            WHERE to_role = ? AND from_role != ''
+            ORDER BY from_role
+            """,
+            (from_role,),
+        ).fetchall()
+        values = [r["from_role"] for r in rows]
+    else:
+        rows = db.execute(
+            """
+            SELECT DISTINCT to_role FROM ports_definitions
+            WHERE from_role = ? AND to_role != ''
+            ORDER BY to_role
+            """,
+            (from_role,),
+        ).fetchall()
+        values = [r["to_role"] for r in rows]
+
     return render_template(
         "partials/to_roles.html",
-        to_roles=[r["to_role"] for r in rows],
+        to_roles=values,
         from_role=from_role,
     )
 
