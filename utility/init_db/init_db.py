@@ -220,7 +220,8 @@ def resolve_role(service):
     Resolve a service name to a role identifier using ROLE_MAPPINGS.
 
     All patterns in ROLE_MAPPINGS are evaluated in order.
-    % in a pattern key is treated as a wildcard (prefix, suffix, or both).
+    % in a pattern is a wildcard and can appear anywhere (start, middle, end,
+    or multiple times), matching any sequence of characters (including none).
     Matching is case-insensitive. Last match wins.
 
     Args:
@@ -235,20 +236,60 @@ def resolve_role(service):
 
     role = ""
     service_lower = service.lower()
+
     for pattern, mapped_role in ROLE_MAPPINGS.items():
         pattern_lower = pattern.lower()
-        has_prefix_wildcard = pattern_lower.startswith("%")
-        has_suffix_wildcard = pattern_lower.endswith("%")
-        literal = pattern_lower.strip("%")
 
-        if has_prefix_wildcard and has_suffix_wildcard:
-            match = literal in service_lower
-        elif has_prefix_wildcard:
-            match = service_lower.endswith(literal)
-        elif has_suffix_wildcard:
-            match = service_lower.startswith(literal)
+        if "%" not in pattern_lower:
+            match = service_lower == pattern_lower
         else:
-            match = service_lower == literal
+            segments = pattern_lower.split("%")
+            anchored_start = segments[0] != ""   # no leading % => must match from start
+            anchored_end = segments[-1] != ""    # no trailing % => must match to end
+            # drop empty segments created by leading/trailing/consecutive %
+            parts = [s for s in segments if s != ""]
+
+            if not parts:
+                # pattern was just "%", "%%", etc. -> matches anything
+                match = True
+            else:
+                pos = 0
+                match = True
+
+                # check first segment
+                if anchored_start:
+                    if not service_lower.startswith(parts[0]):
+                        match = False
+                    else:
+                        pos = len(parts[0])
+                else:
+                    idx = service_lower.find(parts[0], pos)
+                    if idx == -1:
+                        match = False
+                    else:
+                        pos = idx + len(parts[0])
+
+                # check middle segments (in order, non-overlapping)
+                if match:
+                    for seg in parts[1:-1] if len(parts) > 2 else []:
+                        idx = service_lower.find(seg, pos)
+                        if idx == -1:
+                            match = False
+                            break
+                        pos = idx + len(seg)
+
+                # check last segment (only if more than one part)
+                if match and len(parts) > 1:
+                    last = parts[-1]
+                    if anchored_end:
+                        if not service_lower.endswith(last):
+                            match = False
+                        else:
+                            idx = service_lower.rfind(last)
+                            match = idx >= pos
+                    else:
+                        idx = service_lower.find(last, pos)
+                        match = idx != -1
 
         if match:
             role = mapped_role

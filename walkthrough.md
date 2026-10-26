@@ -297,6 +297,14 @@ I talked about a database containing the relationships between the Veeam system 
 But where I've got the info? The Veeam website at [Ports Reference](https://helpcenter.veeam.com/docs/vbr/userguide/used_ports.html?ver=13)
 But because I'me kind of lazy.. i created some tools to do it.
 
+### Firewall rules
+
+`veeamdesigner.py` with the added -f parameters output a rough definitions of firewall rules.
+
+### Subnet Filtering
+
+`veeamdesigner.py` with the added -s filter the output for links between system in the same IP subnet.
+
 ### Scraping the database
 
 To recreate the database:
@@ -312,7 +320,7 @@ To recreate the database:
 3. Run the Python script `extract_ports.py` to parse the HTML and convert the data into txt:
 
    ```
-   python extract_ports.py -i PortsVBR.html -p VBR > VBR13.scrape
+   python extract_ports.py -i PortsVBR13.html -p VBR > VBR13.scrape
    ```
 
    These parses the HTML, adds the product code, and saves the output to corresponding output files.
