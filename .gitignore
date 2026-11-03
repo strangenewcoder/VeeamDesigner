@@ -212,8 +212,8 @@ history/
 venv/
 work/
 projects/
-env.cmd
-propagatedb.cmd
+*.cmd
+*.sh
 role_mappings.py
 .~lock.*
 *.drawio.bkp
